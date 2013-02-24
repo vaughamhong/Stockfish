@@ -59,7 +59,7 @@ private:
   Fn* on_change;
 };
 
-void init(OptionsMap&);
+void init(const char *resourcePath, const char *documentsPath, OptionsMap&);
 void loop(const std::string&);
 
 } // namespace UCI

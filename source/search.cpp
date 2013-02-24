@@ -34,9 +34,9 @@
 #include "thread.h"
 #include "tt.h"
 #include "ucioption.h"
+#include "callbacks.h"
 
 namespace Search {
-
   volatile SignalsType Signals;
   LimitsType Limits;
   std::vector<RootMove> RootMoves;
@@ -181,6 +181,11 @@ void Search::think() {
 
   static PolyglotBook book; // Defined static to initialize the PRNG only once
 
+  // Call callback for star thinking
+  if(Callbacks::onStartThinking){
+      Callbacks::onStartThinking();
+  }
+    
   RootColor = RootPos.side_to_move();
   TimeMgr.init(Limits, RootPos.startpos_ply_counter(), RootColor);
 
@@ -275,6 +280,12 @@ finalize:
       RootPos.this_thread()->wait_for(Signals.stop);
   }
 
+  // Call callback with best move
+  if(Callbacks::onMoveFound){
+    const string uciMove = move_to_uci(RootMoves[0].pv[0], RootPos.is_chess960());
+    Callbacks::onMoveFound(uciMove);
+  }
+    
   // Best move could be MOVE_NONE when searching on a stalemate position
   sync_cout << "bestmove " << move_to_uci(RootMoves[0].pv[0], RootPos.is_chess960())
             << " ponder "  << move_to_uci(RootMoves[0].pv[1], RootPos.is_chess960())

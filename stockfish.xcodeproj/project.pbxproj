@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		BA3EB58E16CF0C1D00C441A0 /* callbacks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BA3EB58D16CF0C1C00C441A0 /* callbacks.cpp */; };
 		BACBA19216C1735B006255A6 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BACBA19116C1735B006255A6 /* Foundation.framework */; };
 		BACBA1A216C173EC006255A6 /* stockfish-Prefix.pch in Headers */ = {isa = PBXBuildFile; fileRef = BACBA19F16C173EC006255A6 /* stockfish-Prefix.pch */; };
 		BACBA1A316C173EC006255A6 /* stockfish.h in Headers */ = {isa = PBXBuildFile; fileRef = BACBA1A016C173EC006255A6 /* stockfish.h */; };
@@ -22,8 +23,6 @@
 		BACBA1D816C173F4006255A6 /* endgame.h in Headers */ = {isa = PBXBuildFile; fileRef = BACBA1AE16C173F4006255A6 /* endgame.h */; };
 		BACBA1D916C173F4006255A6 /* evaluate.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BACBA1AF16C173F4006255A6 /* evaluate.cpp */; };
 		BACBA1DA16C173F4006255A6 /* evaluate.h in Headers */ = {isa = PBXBuildFile; fileRef = BACBA1B016C173F4006255A6 /* evaluate.h */; };
-		BACBA1DB16C173F4006255A6 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BACBA1B116C173F4006255A6 /* main.cpp */; };
-		BACBA1DC16C173F4006255A6 /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = BACBA1B216C173F4006255A6 /* Makefile */; };
 		BACBA1DD16C173F4006255A6 /* material.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BACBA1B316C173F4006255A6 /* material.cpp */; };
 		BACBA1DE16C173F4006255A6 /* material.h in Headers */ = {isa = PBXBuildFile; fileRef = BACBA1B416C173F4006255A6 /* material.h */; };
 		BACBA1DF16C173F4006255A6 /* misc.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BACBA1B516C173F4006255A6 /* misc.cpp */; };
@@ -56,6 +55,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		BA3EB58C16CF0B4600C441A0 /* callbacks.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = callbacks.h; sourceTree = "<group>"; };
+		BA3EB58D16CF0C1C00C441A0 /* callbacks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = callbacks.cpp; sourceTree = "<group>"; };
 		BACBA18E16C1735B006255A6 /* libstockfish.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libstockfish.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		BACBA19116C1735B006255A6 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		BACBA19F16C173EC006255A6 /* stockfish-Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "stockfish-Prefix.pch"; sourceTree = "<group>"; };
@@ -72,8 +73,6 @@
 		BACBA1AE16C173F4006255A6 /* endgame.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = endgame.h; sourceTree = "<group>"; };
 		BACBA1AF16C173F4006255A6 /* evaluate.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = evaluate.cpp; sourceTree = "<group>"; };
 		BACBA1B016C173F4006255A6 /* evaluate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = evaluate.h; sourceTree = "<group>"; };
-		BACBA1B116C173F4006255A6 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
-		BACBA1B216C173F4006255A6 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		BACBA1B316C173F4006255A6 /* material.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = material.cpp; sourceTree = "<group>"; };
 		BACBA1B416C173F4006255A6 /* material.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = material.h; sourceTree = "<group>"; };
 		BACBA1B516C173F4006255A6 /* misc.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = misc.cpp; sourceTree = "<group>"; };
@@ -181,8 +180,6 @@
 				BACBA1AE16C173F4006255A6 /* endgame.h */,
 				BACBA1AF16C173F4006255A6 /* evaluate.cpp */,
 				BACBA1B016C173F4006255A6 /* evaluate.h */,
-				BACBA1B116C173F4006255A6 /* main.cpp */,
-				BACBA1B216C173F4006255A6 /* Makefile */,
 				BACBA1B316C173F4006255A6 /* material.cpp */,
 				BACBA1B416C173F4006255A6 /* material.h */,
 				BACBA1B516C173F4006255A6 /* misc.cpp */,
@@ -212,6 +209,8 @@
 				BACBA1CD16C173F4006255A6 /* uci.cpp */,
 				BACBA1CE16C173F4006255A6 /* ucioption.cpp */,
 				BACBA1CF16C173F4006255A6 /* ucioption.h */,
+				BA3EB58C16CF0B4600C441A0 /* callbacks.h */,
+				BA3EB58D16CF0C1C00C441A0 /* callbacks.cpp */,
 			);
 			path = source;
 			sourceTree = SOURCE_ROOT;
@@ -338,8 +337,6 @@
 				BACBA1D516C173F4006255A6 /* book.cpp in Sources */,
 				BACBA1D716C173F4006255A6 /* endgame.cpp in Sources */,
 				BACBA1D916C173F4006255A6 /* evaluate.cpp in Sources */,
-				BACBA1DB16C173F4006255A6 /* main.cpp in Sources */,
-				BACBA1DC16C173F4006255A6 /* Makefile in Sources */,
 				BACBA1DD16C173F4006255A6 /* material.cpp in Sources */,
 				BACBA1DF16C173F4006255A6 /* misc.cpp in Sources */,
 				BACBA1E116C173F4006255A6 /* movegen.cpp in Sources */,
@@ -353,6 +350,7 @@
 				BACBA1F416C173F4006255A6 /* tt.cpp in Sources */,
 				BACBA1F716C173F4006255A6 /* uci.cpp in Sources */,
 				BACBA1F816C173F4006255A6 /* ucioption.cpp in Sources */,
+				BA3EB58E16CF0C1D00C441A0 /* callbacks.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -414,11 +412,15 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				CLANG_CXX_LANGUAGE_STANDARD = "compiler-default";
+				CLANG_CXX_LIBRARY = "compiler-default";
 				DSTROOT = /tmp/stockfish.dst;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "ios/stockfish-Prefix.pch";
 				GCC_THUMB_SUPPORT = NO;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				IPHONEOS_DEPLOYMENT_TARGET = 6.1;
+				ONLY_ACTIVE_ARCH = NO;
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -430,11 +432,15 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				CLANG_CXX_LANGUAGE_STANDARD = "compiler-default";
+				CLANG_CXX_LIBRARY = "compiler-default";
 				DSTROOT = /tmp/stockfish.dst;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "ios/stockfish-Prefix.pch";
 				GCC_THUMB_SUPPORT = NO;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				IPHONEOS_DEPLOYMENT_TARGET = 6.1;
+				ONLY_ACTIVE_ARCH = NO;
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;

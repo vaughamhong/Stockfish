@@ -248,7 +248,7 @@ Entry* probe(const Position& pos, Table& entries, Endgames& endgames) {
       e->spaceWeight = minorPieceCount * minorPieceCount;
   }
 
-  // Evaluate the material imbalance. We use PIECE_TYPE_NONE as a place holder
+  // Evaluate the material imbalance. We use PIECE_kTypeNone as a place holder
   // for the bishop pair "extended piece", this allow us to be more flexible
   // in defining bishop pair bonuses.
   const int pieceCount[COLOR_NB][PIECE_TYPE_NB] = {

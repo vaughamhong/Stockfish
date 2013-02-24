@@ -54,15 +54,17 @@ bool CaseInsensitiveLess::operator() (const string& s1, const string& s2) const 
 /// and initializes the default value of "Threads" and "Min Split Depth"
 /// parameters according to the number of CPU cores detected.
 
-void init(OptionsMap& o) {
+void init(const char *resourcePath, const char *documentsPath, OptionsMap& o) {
 
   int cpus = std::min(cpu_count(), MAX_THREADS);
   int msd = cpus < 8 ? 4 : 7;
+  std::string bookFilePath = std::string(resourcePath) + std::string("/book.bin");
+  std::string searchLogPath = std::string(documentsPath) + std::string("/SearchLog.txt");
 
   o["Use Debug Log"]               = Option(false, on_logger);
   o["Use Search Log"]              = Option(false);
-  o["Search Log Filename"]         = Option("SearchLog.txt");
-  o["Book File"]                   = Option("book.bin");
+  o["Search Log Filename"]         = Option(searchLogPath.c_str());
+  o["Book File"]                   = Option(bookFilePath.c_str());
   o["Best Book Move"]              = Option(false);
   o["Contempt Factor"]             = Option(0, -50,  50);
   o["Mobility (Middle Game)"]      = Option(100, 0, 200, on_eval);
