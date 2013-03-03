@@ -1483,7 +1483,7 @@ split_point_start: // At split points actual search starts from here
 
     // RootMoves are already sorted by score in descending order
     int variance = std::min(RootMoves[0].score - RootMoves[PVSize - 1].score, PawnValueMg);
-    int weakness = 120 - 2 * level;
+    int weakness = 256 - 2 * level;
     int max_s = -VALUE_INFINITE;
     best = MOVE_NONE;
 
