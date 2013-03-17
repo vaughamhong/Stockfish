@@ -282,7 +282,7 @@ finalize:
 
   // Call callback with best move
   if(Callbacks::onMoveFound){
-    const string uciMove = move_to_uci(RootMoves[0].pv[0], RootPos.is_chess960());
+    string uciMove = move_to_uci(RootMoves[0].pv[0], RootPos.is_chess960());
     Callbacks::onMoveFound(uciMove);
   }
     
