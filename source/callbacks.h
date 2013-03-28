@@ -27,7 +27,7 @@
 namespace Callbacks{
   // Callback prototypes
   typedef void(*onStartThinkingCallback)();
-  typedef void(*onMoveFoundCallback)(std::string uciMove);
+  typedef void(*onMoveFoundCallback)(std::string startFenState, std::string uciMove);
 
   // Callback declarations
   extern onStartThinkingCallback onStartThinking;

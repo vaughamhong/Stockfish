@@ -283,7 +283,7 @@ finalize:
   // Call callback with best move
   if(Callbacks::onMoveFound){
     string uciMove = move_to_uci(RootMoves[0].pv[0], RootPos.is_chess960());
-    Callbacks::onMoveFound(uciMove);
+    Callbacks::onMoveFound(RootPos.fen(), uciMove);
   }
     
   // Best move could be MOVE_NONE when searching on a stalemate position
