@@ -1,7 +1,7 @@
 /*
   Stockfish, a UCI chess playing engine derived from Glaurung 2.1
   Copyright (C) 2004-2008 Tord Romstad (Glaurung author)
-  Copyright (C) 2008-2012 Marco Costalba, Joona Kiiski, Tord Romstad
+  Copyright (C) 2008-2013 Marco Costalba, Joona Kiiski, Tord Romstad
 
   Stockfish is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -35,6 +35,20 @@ namespace {
     STOP
   };
 
+  // Our insertion sort, guaranteed to be stable, as is needed
+  void insertion_sort(MoveStack* begin, MoveStack* end)
+  {
+    MoveStack tmp, *p, *q;
+
+    for (p = begin + 1; p < end; ++p)
+    {
+        tmp = *p;
+        for (q = p; q != begin && *(q-1) < tmp; --q)
+            *q = *(q-1);
+        *q = tmp;
+    }
+  }
+
   // Unary predicate used by std::partition to split positive scores from remaining
   // ones so to sort separately the two sets, and with the second sort delayed.
   inline bool has_positive_score(const MoveStack& ms) { return ms.score > 0; }
@@ -56,14 +70,15 @@ namespace {
 /// search captures, promotions and some checks) and about how important good
 /// move ordering is at the current node.
 
-MovePicker::MovePicker(const Position& p, Move ttm, Depth d, const History& h,
-                       Search::Stack* s, Value beta) : pos(p), Hist(h), depth(d) {
+MovePicker::MovePicker(const Position& p, Move ttm, Depth d, const HistoryStats& h, Move* cm,
+                       Search::Stack* s, Value beta) : pos(p), history(h), depth(d) {
 
   assert(d > DEPTH_ZERO);
 
   captureThreshold = 0;
   cur = end = moves;
   endBadCaptures = moves + MAX_MOVES - 1;
+  countermoves = cm;
   ss = s;
 
   if (p.checkers())
@@ -73,15 +88,12 @@ MovePicker::MovePicker(const Position& p, Move ttm, Depth d, const History& h,
   {
       phase = MAIN_SEARCH;
 
-      killers[0].move = ss->killers[0];
-      killers[1].move = ss->killers[1];
-
       // Consider sligtly negative captures as good if at low depth and far from beta
-      if (ss && ss->staticEval < beta - PawnValueMg && d < 3 * ONE_PLY)
+      if (ss->staticEval < beta - PawnValueMg && d < 3 * ONE_PLY)
           captureThreshold = -PawnValueMg;
 
       // Consider negative captures as good if still enough to reach beta
-      else if (ss && ss->staticEval > beta)
+      else if (ss->staticEval > beta)
           captureThreshold = beta - ss->staticEval;
   }
 
@@ -89,8 +101,8 @@ MovePicker::MovePicker(const Position& p, Move ttm, Depth d, const History& h,
   end += (ttMove != MOVE_NONE);
 }
 
-MovePicker::MovePicker(const Position& p, Move ttm, Depth d, const History& h,
-                       Square sq) : pos(p), Hist(h), cur(moves), end(moves) {
+MovePicker::MovePicker(const Position& p, Move ttm, Depth d, const HistoryStats& h,
+                       Square sq) : pos(p), history(h), cur(moves), end(moves) {
 
   assert(d <= DEPTH_ZERO);
 
@@ -121,8 +133,8 @@ MovePicker::MovePicker(const Position& p, Move ttm, Depth d, const History& h,
   end += (ttMove != MOVE_NONE);
 }
 
-MovePicker::MovePicker(const Position& p, Move ttm, const History& h, PieceType pt)
-                       : pos(p), Hist(h), cur(moves), end(moves) {
+MovePicker::MovePicker(const Position& p, Move ttm, const HistoryStats& h, PieceType pt)
+                       : pos(p), history(h), cur(moves), end(moves) {
 
   assert(!pos.checkers());
 
@@ -180,7 +192,7 @@ void MovePicker::score<QUIETS>() {
   for (MoveStack* it = moves; it != end; ++it)
   {
       m = it->move;
-      it->score = Hist[pos.piece_moved(m)][to_sq(m)];
+      it->score = history[pos.piece_moved(m)][to_sq(m)];
   }
 }
 
@@ -196,13 +208,13 @@ void MovePicker::score<EVASIONS>() {
   {
       m = it->move;
       if ((seeScore = pos.see_sign(m)) < 0)
-          it->score = seeScore - History::Max; // At the bottom
+          it->score = seeScore - HistoryStats::Max; // At the bottom
 
       else if (pos.is_capture(m))
           it->score =  PieceValue[MG][pos.piece_on(to_sq(m))]
-                     - type_of(pos.piece_moved(m)) + History::Max;
+                     - type_of(pos.piece_moved(m)) + HistoryStats::Max;
       else
-          it->score = Hist[pos.piece_moved(m)][to_sq(m)];
+          it->score = history[pos.piece_moved(m)][to_sq(m)];
   }
 }
 
@@ -224,20 +236,33 @@ void MovePicker::generate_next() {
   case KILLERS_S1:
       cur = killers;
       end = cur + 2;
+
+      killers[0].move = ss->killers[0];
+      killers[1].move = ss->killers[1];
+      killers[2].move = killers[3].move = MOVE_NONE;
+
+      // Be sure countermoves are different from killers
+      for (int i = 0; i < 2; i++)
+          if (countermoves[i] != cur->move && countermoves[i] != (cur+1)->move)
+              (end++)->move = countermoves[i];
+
+      if (countermoves[1] && countermoves[1] == countermoves[0]) // Due to SMP races
+          killers[3].move = MOVE_NONE;
+
       return;
 
   case QUIETS_1_S1:
       endQuiets = end = generate<QUIETS>(pos, moves);
       score<QUIETS>();
       end = std::partition(cur, end, has_positive_score);
-      sort<MoveStack>(cur, end);
+      insertion_sort(cur, end);
       return;
 
   case QUIETS_2_S1:
       cur = end;
       end = endQuiets;
       if (depth >= 3 * ONE_PLY)
-          sort<MoveStack>(cur, end);
+          insertion_sort(cur, end);
       return;
 
   case BAD_CAPTURES_S1:
@@ -315,7 +340,9 @@ Move MovePicker::next_move<false>() {
           move = (cur++)->move;
           if (   move != ttMove
               && move != killers[0].move
-              && move != killers[1].move)
+              && move != killers[1].move
+              && move != killers[2].move
+              && move != killers[3].move)
               return move;
           break;
 
@@ -360,4 +387,4 @@ Move MovePicker::next_move<false>() {
 /// from the split point's shared MovePicker object. This function is not thread
 /// safe so must be lock protected by the caller.
 template<>
-Move MovePicker::next_move<true>() { return ss->sp->movePicker->next_move<false>(); }
+Move MovePicker::next_move<true>() { return ss->splitPoint->movePicker->next_move<false>(); }

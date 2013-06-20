@@ -1,7 +1,7 @@
 /*
   Stockfish, a UCI chess playing engine derived from Glaurung 2.1
   Copyright (C) 2004-2008 Tord Romstad (Glaurung author)
-  Copyright (C) 2008-2012 Marco Costalba, Joona Kiiski, Tord Romstad
+  Copyright (C) 2008-2013 Marco Costalba, Joona Kiiski, Tord Romstad
 
   Stockfish is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -56,10 +56,11 @@
 #   include <xmmintrin.h> // Intel and Microsoft header for _mm_prefetch()
 #  endif
 
+#define CACHE_LINE_SIZE 64
 #if defined(_MSC_VER) || defined(__INTEL_COMPILER)
-#  define CACHE_LINE_ALIGNMENT __declspec(align(64))
+#  define CACHE_LINE_ALIGNMENT __declspec(align(CACHE_LINE_SIZE))
 #else
-#  define CACHE_LINE_ALIGNMENT  __attribute__ ((aligned(64)))
+#  define CACHE_LINE_ALIGNMENT  __attribute__ ((aligned(CACHE_LINE_SIZE)))
 #endif
 
 #if defined(_MSC_VER)
@@ -212,7 +213,7 @@ enum Depth {
   DEPTH_ZERO          =  0 * ONE_PLY,
   DEPTH_QS_CHECKS     = -1 * ONE_PLY,
   DEPTH_QS_NO_CHECKS  = -2 * ONE_PLY,
-  DEPTH_QS_RECAPTURES = -5 * ONE_PLY,
+  DEPTH_QS_RECAPTURES = -7 * ONE_PLY,
 
   DEPTH_NONE = -127 * ONE_PLY
 };
@@ -267,7 +268,7 @@ inline Score make_score(int mg, int eg) { return Score((mg << 16) + eg); }
 /// Extracting the signed lower and upper 16 bits it not so trivial because
 /// according to the standard a simple cast to short is implementation defined
 /// and so is a right shift of a signed integer.
-inline Value mg_value(Score s) { return Value(((s + 32768) & ~0xffff) / 0x10000); }
+inline Value mg_value(Score s) { return Value(((s + 0x8000) & ~0xffff) / 0x10000); }
 
 /// On Intel 64 bit we have a small speed regression with the standard conforming
 /// version, so use a faster code in this case that, although not 100% standard
@@ -324,29 +325,9 @@ inline Score operator/(Score s, int i) {
   return make_score(mg_value(s) / i, eg_value(s) / i);
 }
 
-/// Weight score v by score w trying to prevent overflow
-inline Score apply_weight(Score v, Score w) {
-  return make_score((int(mg_value(v)) * mg_value(w)) / 0x100,
-                    (int(eg_value(v)) * eg_value(w)) / 0x100);
-}
-
 #undef ENABLE_OPERATORS_ON
 #undef ENABLE_SAFE_OPERATORS_ON
 
-namespace Zobrist {
-
-  extern Key psq[COLOR_NB][PIECE_TYPE_NB][SQUARE_NB];
-  extern Key enpassant[FILE_NB];
-  extern Key castle[CASTLE_RIGHT_NB];
-  extern Key side;
-  extern Key exclusion;
-
-  void init();
-}
-
-CACHE_LINE_ALIGNMENT
-
-extern Score pieceSquareTable[PIECE_NB][SQUARE_NB];
 extern Value PieceValue[PHASE_NB][PIECE_NB];
 extern int SquareDistance[SQUARE_NB][SQUARE_NB];
 
@@ -487,23 +468,6 @@ inline bool is_ok(Move m) {
 inline const std::string square_to_string(Square s) {
   char ch[] = { file_to_char(file_of(s)), rank_to_char(rank_of(s)), 0 };
   return ch;
-}
-
-/// Our insertion sort implementation, works with pointers and iterators and is
-/// guaranteed to be stable, as is needed.
-template<typename T, typename K>
-void sort(K begin, K end)
-{
-  T tmp;
-  K p, q;
-
-  for (p = begin + 1; p < end; p++)
-  {
-      tmp = *p;
-      for (q = p; q != begin && *(q-1) < tmp; --q)
-          *q = *(q-1);
-      *q = tmp;
-  }
 }
 
 #endif // !defined(TYPES_H_INCLUDED)

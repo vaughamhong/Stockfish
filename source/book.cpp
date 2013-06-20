@@ -1,7 +1,7 @@
 /*
   Stockfish, a UCI chess playing engine derived from Glaurung 2.1
   Copyright (C) 2004-2008 Tord Romstad (Glaurung author)
-  Copyright (C) 2008-2012 Marco Costalba, Joona Kiiski, Tord Romstad
+  Copyright (C) 2008-2013 Marco Costalba, Joona Kiiski, Tord Romstad
 
   Stockfish is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -436,9 +436,9 @@ Move PolyglotBook::probe(const Position& pos, const string& fName, bool pickBest
       move = make<PROMOTION>(from_sq(move), to_sq(move), PieceType(pt + 1));
 
   // Add 'special move' flags and verify it is legal
-  for (MoveList<LEGAL> ml(pos); !ml.end(); ++ml)
-      if (move == (ml.move() ^ type_of(ml.move())))
-          return ml.move();
+  for (MoveList<LEGAL> it(pos); *it; ++it)
+      if (move == (*it ^ type_of(*it)))
+          return *it;
 
   return MOVE_NONE;
 }

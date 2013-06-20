@@ -1,7 +1,7 @@
 /*
   Stockfish, a UCI chess playing engine derived from Glaurung 2.1
   Copyright (C) 2004-2008 Tord Romstad (Glaurung author)
-  Copyright (C) 2008-2012 Marco Costalba, Joona Kiiski, Tord Romstad
+  Copyright (C) 2008-2013 Marco Costalba, Joona Kiiski, Tord Romstad
 
   Stockfish is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -33,7 +33,7 @@ void print(Bitboard b);
 namespace Bitbases {
 
 void init_kpk();
-uint32_t probe_kpk(Square wksq, Square wpsq, Square bksq, Color stm);
+bool probe_kpk(Square wksq, Square wpsq, Square bksq, Color us);
 
 }
 
@@ -63,6 +63,7 @@ extern Bitboard PassedPawnMask[COLOR_NB][SQUARE_NB];
 extern Bitboard AttackSpanMask[COLOR_NB][SQUARE_NB];
 extern Bitboard PseudoAttacks[PIECE_TYPE_NB][SQUARE_NB];
 
+const Bitboard BlackSquares = 0xAA55AA55AA55AA55ULL;
 
 /// Overloads of bitwise operators between a Bitboard and a Square for testing
 /// whether a given bit is set in a bitboard, and for setting and clearing bits.
@@ -92,6 +93,18 @@ inline Bitboard operator^(Bitboard b, Square s) {
 
 inline bool more_than_one(Bitboard b) {
   return b & (b - 1);
+}
+
+
+/// shift_bb() moves bitboard one step along direction Delta. Mainly for pawns.
+
+template<Square Delta>
+inline Bitboard shift_bb(Bitboard b) {
+
+  return  Delta == DELTA_N  ?  b             << 8 : Delta == DELTA_S  ?  b             >> 8
+        : Delta == DELTA_NE ? (b & ~FileHBB) << 9 : Delta == DELTA_SE ? (b & ~FileHBB) >> 7
+        : Delta == DELTA_NW ? (b & ~FileABB) << 7 : Delta == DELTA_SW ? (b & ~FileABB) >> 9
+        : 0;
 }
 
 
@@ -199,8 +212,7 @@ inline bool squares_aligned(Square s1, Square s2, Square s3) {
 /// the same color of the given square.
 
 inline Bitboard same_color_squares(Square s) {
-  return Bitboard(0xAA55AA55AA55AA55ULL) & s ?  0xAA55AA55AA55AA55ULL
-                                             : ~0xAA55AA55AA55AA55ULL;
+  return BlackSquares & s ? BlackSquares : ~BlackSquares;
 }
 
 

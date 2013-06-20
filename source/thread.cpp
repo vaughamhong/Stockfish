@@ -1,7 +1,7 @@
 /*
   Stockfish, a UCI chess playing engine derived from Glaurung 2.1
   Copyright (C) 2004-2008 Tord Romstad (Glaurung author)
-  Copyright (C) 2008-2012 Marco Costalba, Joona Kiiski, Tord Romstad
+  Copyright (C) 2008-2013 Marco Costalba, Joona Kiiski, Tord Romstad
 
   Stockfish is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -43,11 +43,12 @@ namespace { extern "C" {
 // Thread c'tor starts a newly-created thread of execution that will call
 // the the virtual function idle_loop(), going immediately to sleep.
 
-Thread::Thread() : splitPoints() {
+Thread::Thread() /* : splitPoints() */ { // Value-initialization bug in MSVC
 
   searching = exit = false;
   maxPly = splitPointsSize = 0;
   activeSplitPoint = NULL;
+  activePosition = NULL;
   idx = Threads.size();
 
   if (!thread_create(handle, start_routine, this))
@@ -229,13 +230,13 @@ void ThreadPool::read_uci_options() {
 // slave_available() tries to find an idle thread which is available as a slave
 // for the thread 'master'.
 
-bool ThreadPool::slave_available(Thread* master) const {
+Thread* ThreadPool::available_slave(Thread* master) const {
 
   for (const_iterator it = begin(); it != end(); ++it)
       if ((*it)->is_available_to(master))
-          return true;
+          return *it;
 
-  return false;
+  return NULL;
 }
 
 
@@ -251,7 +252,7 @@ bool ThreadPool::slave_available(Thread* master) const {
 template <bool Fake>
 void Thread::split(Position& pos, Stack* ss, Value alpha, Value beta, Value* bestValue,
                    Move* bestMove, Depth depth, Move threatMove, int moveCount,
-                   MovePicker* movePicker, int nodeType) {
+                   MovePicker* movePicker, int nodeType, bool cutNode) {
 
   assert(pos.pos_is_ok());
   assert(*bestValue <= alpha && alpha < beta && beta <= VALUE_INFINITE);
@@ -273,6 +274,7 @@ void Thread::split(Position& pos, Stack* ss, Value alpha, Value beta, Value* bes
   sp.alpha = alpha;
   sp.beta = beta;
   sp.nodeType = nodeType;
+  sp.cutNode = cutNode;
   sp.movePicker = movePicker;
   sp.moveCount = moveCount;
   sp.pos = &pos;
@@ -288,24 +290,19 @@ void Thread::split(Position& pos, Stack* ss, Value alpha, Value beta, Value* bes
 
   splitPointsSize++;
   activeSplitPoint = &sp;
+  activePosition = NULL;
 
   size_t slavesCnt = 1; // This thread is always included
+  Thread* slave;
 
-  for (ThreadPool::iterator it = Threads.begin(); it != Threads.end() && !Fake; ++it)
+  while (    (slave = Threads.available_slave(this)) != NULL
+         && ++slavesCnt <= Threads.maxThreadsPerSplitPoint && !Fake)
   {
-      Thread* slave = *it;
-
-      if (slave->is_available_to(this) && ++slavesCnt <= Threads.maxThreadsPerSplitPoint)
-      {
-          sp.slavesMask |= 1ULL << slave->idx;
-          slave->activeSplitPoint = &sp;
-          slave->searching = true; // Slave leaves idle_loop()
-          slave->notify_one(); // Could be sleeping
-      }
+      sp.slavesMask |= 1ULL << slave->idx;
+      slave->activeSplitPoint = &sp;
+      slave->searching = true; // Slave leaves idle_loop()
+      slave->notify_one(); // Could be sleeping
   }
-
-  sp.mutex.unlock();
-  Threads.mutex.unlock();
 
   // Everything is set up. The master thread enters the idle loop, from which
   // it will instantly launch a search, because its 'searching' flag is set.
@@ -313,22 +310,27 @@ void Thread::split(Position& pos, Stack* ss, Value alpha, Value beta, Value* bes
   // their work at this split point.
   if (slavesCnt > 1 || Fake)
   {
+      sp.mutex.unlock();
+      Threads.mutex.unlock();
+
       Thread::idle_loop(); // Force a call to base class idle_loop()
 
       // In helpful master concept a master can help only a sub-tree of its split
       // point, and because here is all finished is not possible master is booked.
       assert(!searching);
-  }
+      assert(!activePosition);
 
-  // We have returned from the idle loop, which means that all threads are
-  // finished. Note that setting 'searching' and decreasing splitPointsSize is
-  // done under lock protection to avoid a race with Thread::is_available_to().
-  Threads.mutex.lock();
-  sp.mutex.lock();
+      // We have returned from the idle loop, which means that all threads are
+      // finished. Note that setting 'searching' and decreasing splitPointsSize is
+      // done under lock protection to avoid a race with Thread::is_available_to().
+      Threads.mutex.lock();
+      sp.mutex.lock();
+  }
 
   searching = true;
   splitPointsSize--;
   activeSplitPoint = sp.parentSplitPoint;
+  activePosition = &pos;
   pos.set_nodes_searched(pos.nodes_searched() + sp.nodes);
   *bestMove = sp.bestMove;
   *bestValue = sp.bestValue;
@@ -338,8 +340,8 @@ void Thread::split(Position& pos, Stack* ss, Value alpha, Value beta, Value* bes
 }
 
 // Explicit template instantiations
-template void Thread::split<false>(Position&, Stack*, Value, Value, Value*, Move*, Depth, Move, int, MovePicker*, int);
-template void Thread::split< true>(Position&, Stack*, Value, Value, Value*, Move*, Depth, Move, int, MovePicker*, int);
+template void Thread::split<false>(Position&, Stack*, Value, Value, Value*, Move*, Depth, Move, int, MovePicker*, int, bool);
+template void Thread::split< true>(Position&, Stack*, Value, Value, Value*, Move*, Depth, Move, int, MovePicker*, int, bool);
 
 
 // wait_for_think_finished() waits for main thread to go to sleep then returns
@@ -365,15 +367,19 @@ void ThreadPool::start_thinking(const Position& pos, const LimitsType& limits,
   Signals.stopOnPonderhit = Signals.firstRootMove = false;
   Signals.stop = Signals.failedLowAtRoot = false;
 
+  RootMoves.clear();
   RootPos = pos;
   Limits = limits;
-  SetupStates = states; // Ownership transfer here
-  RootMoves.clear();
+  if (states.get()) // If we don't set a new position, preserve current state
+  {
+      SetupStates = states; // Ownership transfer here
+      assert(!states.get());
+  }
 
-  for (MoveList<LEGAL> ml(pos); !ml.end(); ++ml)
+  for (MoveList<LEGAL> it(pos); *it; ++it)
       if (   searchMoves.empty()
-          || std::count(searchMoves.begin(), searchMoves.end(), ml.move()))
-          RootMoves.push_back(RootMove(ml.move()));
+          || std::count(searchMoves.begin(), searchMoves.end(), *it))
+          RootMoves.push_back(RootMove(*it));
 
   main_thread()->thinking = true;
   main_thread()->notify_one(); // Starts main thread

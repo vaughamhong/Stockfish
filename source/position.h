@@ -1,7 +1,7 @@
 /*
   Stockfish, a UCI chess playing engine derived from Glaurung 2.1
   Copyright (C) 2004-2008 Tord Romstad (Glaurung author)
-  Copyright (C) 2008-2012 Marco Costalba, Joona Kiiski, Tord Romstad
+  Copyright (C) 2008-2013 Marco Costalba, Joona Kiiski, Tord Romstad
 
   Stockfish is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -52,7 +52,7 @@ struct StateInfo {
   Key pawnKey, materialKey;
   Value npMaterial[COLOR_NB];
   int castleRights, rule50, pliesFromNull;
-  Score psqScore;
+  Score psq;
   Square epSquare;
 
   Key key;
@@ -95,6 +95,7 @@ public:
   Position(const Position& p, Thread* t) { *this = p; thisThread = t; }
   Position(const std::string& f, bool c960, Thread* t) { set(f, c960, t); }
   Position& operator=(const Position&);
+  static void init();
 
   // Text input/output
   void set(const std::string& fen, bool isChess960, Thread* th);
@@ -112,8 +113,8 @@ public:
   Square king_square(Color c) const;
   Square ep_square() const;
   bool is_empty(Square s) const;
-  const Square* piece_list(Color c, PieceType pt) const;
-  int piece_count(Color c, PieceType pt) const;
+  template<PieceType Pt> int count(Color c) const;
+  template<PieceType Pt> const Square* list(Color c) const;
 
   // Castling
   int can_castle(CastleRight f) const;
@@ -158,7 +159,7 @@ public:
   void undo_null_move();
 
   // Static exchange evaluation
-  int see(Move m) const;
+  int see(Move m, int asymmThreshold = 0) const;
   int see_sign(Move m) const;
 
   // Accessing hash keys
@@ -169,17 +170,16 @@ public:
 
   // Incremental piece-square evaluation
   Score psq_score() const;
-  Score psq_delta(Piece p, Square from, Square to) const;
   Value non_pawn_material(Color c) const;
 
   // Other properties of the position
   Color side_to_move() const;
-  int startpos_ply_counter() const;
+  int game_ply() const;
   bool is_chess960() const;
   Thread* this_thread() const;
   int64_t nodes_searched() const;
   void set_nodes_searched(int64_t n);
-  template<bool SkipRepetition> bool is_draw() const;
+  bool is_draw() const;
 
   // Position consistency check, for debugging
   bool pos_is_ok(int* failedStep = NULL) const;
@@ -218,7 +218,7 @@ private:
   Bitboard castlePath[COLOR_NB][CASTLING_SIDE_NB];
   StateInfo startState;
   int64_t nodes;
-  int startPosPly;
+  int gamePly;
   Color sideToMove;
   Thread* thisThread;
   StateInfo* st;
@@ -273,12 +273,12 @@ inline Bitboard Position::pieces(Color c, PieceType pt1, PieceType pt2) const {
   return byColorBB[c] & (byTypeBB[pt1] | byTypeBB[pt2]);
 }
 
-inline int Position::piece_count(Color c, PieceType pt) const {
-  return pieceCount[c][pt];
+template<PieceType Pt> inline int Position::count(Color c) const {
+  return pieceCount[c][Pt];
 }
 
-inline const Square* Position::piece_list(Color c, PieceType pt) const {
-  return pieceList[c][pt];
+template<PieceType Pt> inline const Square* Position::list(Color c) const {
+  return pieceList[c][Pt];
 }
 
 inline Square Position::ep_square() const {
@@ -346,10 +346,6 @@ inline Key Position::key() const {
   return st->key;
 }
 
-inline Key Position::exclusion_key() const {
-  return st->key ^ Zobrist::exclusion;
-}
-
 inline Key Position::pawn_key() const {
   return st->pawnKey;
 }
@@ -358,12 +354,8 @@ inline Key Position::material_key() const {
   return st->materialKey;
 }
 
-inline Score Position::psq_delta(Piece p, Square from, Square to) const {
-  return pieceSquareTable[p][to] - pieceSquareTable[p][from];
-}
-
 inline Score Position::psq_score() const {
-  return st->psqScore;
+  return st->psq;
 }
 
 inline Value Position::non_pawn_material(Color c) const {
@@ -376,8 +368,8 @@ inline bool Position::is_passed_pawn_push(Move m) const {
         && pawn_is_passed(sideToMove, to_sq(m));
 }
 
-inline int Position::startpos_ply_counter() const {
-  return startPosPly + st->pliesFromNull; // HACK
+inline int Position::game_ply() const {
+  return gamePly;
 }
 
 inline bool Position::opposite_bishops() const {
